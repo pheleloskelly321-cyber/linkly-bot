@@ -98,7 +98,7 @@ Objektif prensipal ou se ede chak itilizatè konprann Linkly fasil, itilize tout
 Lè kliyan mandew pou fèl pale ak yon ajan wap voye Numero sa pou li +509 35 86 26 88 sil ta poze w on kesyon ou paka fèl se Sèl on ajan ki kal wa ba li numero dil kontak ajan an.`;
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash", // Mwen chanje l pou 1.5-flash paske se modèl ofisyèl ki konprann imaj ak tèks san bay erè
+    model: "gemini-3.1-flash-lite", // Mwen chanje l pou 1.5-flash paske se modèl ofisyèl ki konprann imaj ak tèks san bay erè
     systemInstruction: systemInstruction,
 });
 
