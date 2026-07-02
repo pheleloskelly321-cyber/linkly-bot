@@ -1,13 +1,13 @@
 {
   "name": "linkly-bot",
   "version": "1.0.0",
-  "description": "Bot Linkly",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
-    "baileys": "^6.7.0"
+    "@whiskeysockets/baileys": "^6.7.0",
+    "pino": "^9.0.0",
+    "@google/generative-ai": "^0.1.0"
   }
 }
-
