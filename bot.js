@@ -1,9 +1,21 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
+onst { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
+const http = require('http'); // 👈 Nou ajoute sa pou Render
 
-// Fonksyon pou poze kesyon nan tèminal la
+// ==========================================
+// SÈVÈ ENTÈNÈT POU RENDER (PORT BINDING)
+// ==========================================
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('🔥 Bot Linkly AI a an liy epi l ap travay 24/7 sou Render!');
+}).listen(PORT, () => {
+    console.log(`🌐 Sèvè entènèt ap koute sou pò ${PORT} pou Render`);
+});
+
+// Fonksyon pou poze kesyon nan tèminal la (itil sèlman si w ap teste l sou òdinatè w)
 const mandeNimewo = (kesyon) => {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -19,7 +31,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 // ==========================================
 // 1. KONFIGIRASYON GEMINI API AK SYSTEM PROMPT OU AN
 // ==========================================
-const genAI = new GoogleGenerativeAI("AIzaSyCySG2yp5cXaqfuPJ_3zlvltNd53crHYfA");
+// ⚠️ ATANSYON: Kounye a li pran API Key la nan anviwònman an pou sekirite!
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.error("❌ ERÈ: Ou dwe mete GEMINI_API_KEY kòm yon varyab anviwònman (Environment Variable) nan Render oswa Termux!");
+    process.exit(1);
+}
+const genAI = new GoogleGenerativeAI(apiKey);
 
 const systemInstruction = `Ou se Linkly AI, asistan entèlijan ofisyèl platfòm Linkly.
 
@@ -80,7 +98,7 @@ Objektif prensipal ou se ede chak itilizatè konprann Linkly fasil, itilize tout
 Lè kliyan mandew pou fèl pale ak yon ajan wap voye Numero sa pou li +509 35 86 26 88 sil ta poze w on kesyon ou paka fèl se Sèl on ajan ki kal wa ba li numero dil kontak ajan an.`;
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite",
+    model: "gemini-1.5-flash", // Mwen chanje l pou 1.5-flash paske se modèl ofisyèl ki konprann imaj ak tèks san bay erè
     systemInstruction: systemInstruction,
 });
 
@@ -95,11 +113,12 @@ async function startBot() {
     let phoneNumber = null;
 
     if (!state.creds.registered) {
-        let antre = await mandeNimewo("\n📱 Antre nimewo WhatsApp bot la (Egzanp: 50934XXXXXX): ");
+        // L ap chèche nimewo a nan varyab anviwònman Render la avan. Si l pa jwenn li, l ap mande w li.
+        let antre = process.env.PHONE_NUMBER || await mandeNimewo("\n📱 Antre nimewo WhatsApp bot la (Egzanp: 50934XXXXXX): ");
         phoneNumber = antre.replace(/[^0-9]/g, '');
 
         if (!phoneNumber) {
-            console.log("❌ Ou dwe mete yon nimewo telefòn valab!");
+            console.log("❌ Ou dwe mete yon nimewo telefòn valab nan env varyab oubyen tèminal!");
             process.exit(1);
         }
     }
