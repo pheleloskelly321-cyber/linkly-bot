@@ -1,4 +1,4 @@
-onst { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
