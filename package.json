@@ -6,8 +6,9 @@
     "start": "node bot.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.0",
-    "pino": "^9.0.0",
-    "@google/generative-ai": "^0.1.0"
+    "@google/generative-ai": "^0.24.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "dotenv": "^17.4.2",
+    "pino": "^10.3.1"
   }
 }
