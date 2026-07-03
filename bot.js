@@ -87,7 +87,7 @@ Objektif prensipal ou se ede chak itilizatè konprann Linkly fasil, itilize tout
 Lè kliyan mandew pou fèl pale ak yon ajan wap voye Numero sa pou li +509 35 86 26 88 sil ta poze w on kesyon ou paka fèl se Sèl on ajan ki kal wa ba li numero dil kontak ajan an.`;
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite",
+    model: "gemini-3.1-flash-lite", // 👈 REPARE: Ou dwe itilize modèl sa pou evite erè 404
     systemInstruction: systemInstruction,
 });
 
@@ -242,3 +242,19 @@ http.createServer((req, res) => {
     // Lè sèvè HTTP a louvri, lanse bot WhatsApp la
     startBot();
 });
+
+// ==========================================
+// 5. FONKSYON POU KENBE BOT LA VIVAN (CHAK 1 MINIT)
+// ==========================================
+setInterval(() => {
+    // Ap voye yon ti demann HTTP sou tèt li chak minit
+    http.get(`http://localhost:${PORT}`, (res) => {
+        if (res.statusCode === 200) {
+            console.log("✅ Ping otomatik reyisi: Bot la p ap dòmi.");
+        }
+    }).on('error', (err) => {
+        // Pa fè anyen si l rate yon ping anndan, jis evite li crash
+        console.error("⚠️ Ti entèripsyon ping:", err.message);
+    });
+}, 60000); // 60000 ms = 1 minit
+    
