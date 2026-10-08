@@ -1,11 +1,10 @@
-require('dotenv').config(); // 👈 Modifikasyon: Retire chemen Termux la pou l ka mache sou Render
+require('dotenv').config();
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
-const http = require('http'); // 👈 Pou Render
+const http = require('http');
 
-// Fonksyon pou poze kesyon nan tèminal la (Si l ta sou òdinatè)
 const mandeNimewo = (kesyon) => {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -18,9 +17,6 @@ const mandeNimewo = (kesyon) => {
 };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// ==========================================
-// 1. KONFIGIRASYON GEMINI API AK SYSTEM PROMPT OU AN
-// ==========================================
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
     console.error("❌ ERÈ: Ou dwe mete GEMINI_API_KEY kòm yon varyab anviwònman (Environment Variable) sou Render!");
@@ -28,7 +24,6 @@ if (!apiKey) {
 }
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// NOUVO SYSTEM PROMPT POU LITO
 const systemInstruction = 
 "You are Lito, an AI-powered educational assistant designed specifically for Haitian students.\n\n" +
 "Your mission is to help students learn, understand concepts, solve problems, and improve their academic performance in a simple, friendly, and encouraging way.\n\n" +
@@ -79,22 +74,19 @@ const systemInstruction =
 "- Keep explanations structured and easy to follow\n" + 
 "\n\n[ENSTRIKSYON OBLIGATWA POU BAZ DONE AK LATEX]:\n" +
 "1. LATEX: W ap toujou reponn fòmil ak kalkil matematik/fizik nan fòma LaTeX ($...$ oswa $$...$$).\n" +
-"2. KONTÈKS BAZ DONE: Mwen mete kèk foto ak nòt (soti nan baz done MyLab elèv la) nan kòmansman konvèsasyon sa a. Si elèv la mande w pou w travay sou 'yon egzèsis li te voye anvan', chèche egzèsis sa a nan foto/nòt sa yo epi travay sou li dirèkteman ak li epi depi li voye profil egzamen pou ou lap ekri sa nan message la konsa 'Men profile examen an', kounya wap gade kisa ki nan profil egzamen an epi ou prale Nan base done an wap pran text ki gen raport ak sa ki nan profil egzamen an chanje anyen nan text lan wap ba li l mo pou mo nan lang ou wèl la en français depi nan kòmansman rive nan fin san manke anyen, epi ankò elev ap voye on foto examen pou ou lap di konsa 'resoudre' kounya ou prale nan base de done an sise yon exercise wap pran exemple ki nan base done an menm formule menm shema pou resoudre exercise lan sise definition se menm bagay lan ou pral nan base done an wap rale definition Eli bal repons lan.";
+"2. KONTÈKS BAZ DONE: Mwen mete kèk foto ak nòt (soti nan baz done MyLab elèv la) nan kòmansman konvèsasyon sa a. Si elèv la mande w pou w travay sou 'yon egzèsis li te voye anvan', chèche egzèsis sa a nan foto/nòt sa yo epi travay sou li dirèkteman ak li epi depi li voye profil egzamen pou ou lap ekri sa nan message la konsa'Men profile examen an', kounya wap gade kisa ki nan profil egzamen an epi ou prale Nan base done an wap pran text ki gen raport ak sa ki nan profil egzamen an chanje anyen nan text lan wap ba li l mo pou mo nan lang ou wèl la en français depi nan kòmansman rive nan fin san manke anyen, epi ankò elev ap voye on foto examen pou ou lap di konsa'resoudre' kounya ou prale nan base de done an sise yon exercise wap pran exemple ki nan base done an menm formule menm shema pou resoudre exercise lan sise definition se menm bagay lan ou pral nan base done an wap rale definition Eli bal repons lan.";
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite", // 👈 Modèl ki sipòte analiz imaj pi byen
+    model: "gemini-3.1-flash-lite", 
     systemInstruction: systemInstruction,
 });
 
-console.log("System instruction pou Lito chaje avèk siksè.");
+console.log("System instruction chaje avèk siksè.");
 
 const konvesasyonYo = new Map();
 
-// ==========================================
-// 2. FONKSYON POU KÒMANSE BOT WHATSAPP LA
-// ==========================================
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('sesyon_litobot'); // Non sesyon chanje pou lito
+    const { state, saveCreds } = await useMultiFileAuthState('sesyon_linklybot');
     let phoneNumber = null;
 
     if (!state.creds.registered) {
@@ -125,7 +117,7 @@ async function startBot() {
                 startBot();
             }
         } else if (connection === 'open') {
-            console.log("\n✅ BOT LITO AI A KONEKTE SOU WHATSAPP AK SIKSE! 🔥");
+            console.log("\n✅ BOT LITO KONEKTE SOU WHATSAPP AK SIKSE! 🔥");
         }
     });
 
@@ -146,7 +138,7 @@ async function startBot() {
     sock.ev.on('creds.update', saveCreds);
 
     // ==========================================
-    // 3. LÈ YON MESAJ ANTRE
+    // 3. LÈ YON MESAJ ANTRE (Avèk jere imaj pou analiz)
     // ==========================================
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
@@ -182,17 +174,18 @@ async function startBot() {
             }
 
             const patiMesajKounyeA = [];
+            
+            // Fè AI a kapab analize imaj ki voye ba li a
             if (imageBuffer) {
-                console.log("[+] N ap analize foto a...");
+                console.log("[+] N ap analize foto a pou Gemini...");
                 patiMesajKounyeA.push({
                     inlineData: {
                         data: imageBuffer.toString("base64"),
                         mimeType: mimeType
                     }
                 });
-                // Chanjman enpòtan: Eksplike Gemini klèman kisa pou l fè ak foto a
-                let fotoPrompt = text || "Tanpri analize imaj sa a. Si se yon egzèsis chimi, fizik, oswa matematik, rezoud li etap pa etap selon estrikti (Données, Cherchons, Formule, Remplacement, Calcul, Résultat) jan sa mande nan enstriksyon ou yo. Si se yon pwofil egzamen, chèche enfòmasyon ki gen rapò ak li a nan baz done m yo epi ban mwen l.";
-                patiMesajKounyeA.push({ text: fotoPrompt });
+                // Mete tèks itilizatè a te ekri ak foto a, oswa yon enstriksyon defo pou analize
+                patiMesajKounyeA.push({ text: text || "Gade foto sa a. Si se yon egzèsis, rezoud li. Si se yon pwofil egzamen, chache nan baz done mwen an selon enstriksyon m yo." });
             } else {
                 patiMesajKounyeA.push({ text: text });
             }
@@ -206,7 +199,7 @@ async function startBot() {
             const responseText = result.response.text();
 
             const patiPouIstwa = imageBuffer
-                ? [{ text: `[Mwen te voye yon imaj ba ou] ${text}`.trim() }]
+                ? [{ text: `[Imaj ou te bay la] ${text}`.trim() }]
                 : patiMesajKounyeA;
 
             istwaItilizatere.push({ role: 'user', parts: patiPouIstwa });
@@ -215,19 +208,17 @@ async function startBot() {
             if (istwaItilizatere.length > 20) {
                 istwaItilizatere.splice(0, 2);
             }
-
+            
+            // Lè Lito (bot la) ap reponn
             await sock.sendMessage(from, { text: responseText }, { quoted: m });
 
         } catch (err) {
             console.log("❌ Erè Gemini:", err);
-            await sock.sendMessage(from, { text: "Eskize m, mwen rankontre yon ti pwoblèm teknik kounye a. Tanpri retounen ekri m nan yon ti moman." }, { quoted: m });
+            await sock.sendMessage(from, { text: "Eskize m, mwen rankontre yon ti pwoblèm teknik pandan m ap eseye trete demand sa. Tanpri, eseye ankò." }, { quoted: m });
         }
     });
 }
 
-// ==========================================
-// 4. SÈVÈ HTTP POU ANPECHE RENDER FÈMEN BOT LA
-// ==========================================
 const PORT = process.env.PORT || 10000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -238,9 +229,6 @@ http.createServer((req, res) => {
     startBot();
 });
 
-// ==========================================
-// 5. FONKSYON POU KENBE BOT LA VIVAN (CHAK 1 MINIT)
-// ==========================================
 setInterval(() => {
     http.get(`http://localhost:${PORT}`, (res) => {
         if (res.statusCode === 200) {
@@ -249,5 +237,5 @@ setInterval(() => {
     }).on('error', (err) => {
         console.error("⚠️ Ti entèripsyon ping:", err.message);
     });
-}, 60000);
-        
+}, 60000); 
+            
