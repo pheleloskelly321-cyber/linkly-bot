@@ -1,20 +1,11 @@
 require('dotenv').config();
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
+// 👈 Modifikasyon 1: Mwen ajoute 'Browsers' nan enpòtasyon Baileys la
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
 const http = require('http');
 
-const mandeNimewo = (kesyon) => {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    return new Promise((resolve) => rl.question(kesyon, (repons) => {
-        rl.close();
-        resolve(repons.trim());
-    }));
-};
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -85,6 +76,9 @@ console.log("System instruction chaje avèk siksè.");
 
 const konvesasyonYo = new Map();
 
+// Varyab sa ap anpeche kòd la mande kòd an bouk si l pran on erè
+let isPairingCodeRequested = false;
+
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesyon_linklybot');
     let phoneNumber = null;
@@ -104,7 +98,8 @@ async function startBot() {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: "silent" }),
-        browser: ["Mac OS", "Chrome", "120.0.0.0"]
+        // 👈 Modifikasyon 2: Itilize defo navigatè Baileys pou evite bloke (Erè 405)
+        browser: Browsers.ubuntu('Chrome') 
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -112,18 +107,30 @@ async function startBot() {
 
         if (connection === 'close') {
             const rezon = lastDisconnect?.error?.output?.statusCode;
-            console.log(`[-] Koneksyon fèmen (Kòd: ${rezon}). N ap rekonekte...`);
-            if (rezon !== DisconnectReason.loggedOut) {
-                startBot();
+            console.log(`[-] Koneksyon fèmen (Kòd: ${rezon}).`);
+            
+            // 👈 Modifikasyon 3: Frennen rekoneksyon an si l pran 405 pou l pa spam API WhatsApp la
+            if (rezon === 405) {
+                console.log("⚠️ WHATSAPP BLOKE DEMANN NAN POU 10-15 MINIT (Erè 405). Bot la ap tann avan l eseye ankò...");
+                isPairingCodeRequested = false; // Reset pou l ka mande l ankò
+                setTimeout(startBot, 30000); // Tann 30 segonn olye l rekonekte imedyatman
+            } else if (rezon !== DisconnectReason.loggedOut) {
+                console.log("N ap rekonekte nan 5 segonn...");
+                setTimeout(startBot, 5000);
+            } else {
+                console.log("❌ Ou dekonekte nèt (Logged out).");
             }
         } else if (connection === 'open') {
             console.log("\n✅ BOT LITO KONEKTE SOU WHATSAPP AK SIKSE! 🔥");
+            isPairingCodeRequested = false; 
         }
     });
 
-    if (!sock.authState.creds.registered && phoneNumber) {
-        await delay(4000);
+    // 👈 Modifikasyon 4: Fè l mande kòd la yon sèl fwa nan sik la
+    if (!sock.authState.creds.registered && phoneNumber && !isPairingCodeRequested) {
+        await delay(5000);
         try {
+            isPairingCodeRequested = true;
             console.log(`\n🔄 N ap mande WhatsApp kòd pairing lan pou nimewo: ${phoneNumber}...`);
             let code = await sock.requestPairingCode(phoneNumber);
             console.log(`\n========================================`);
@@ -132,6 +139,7 @@ async function startBot() {
             console.log(`(Tcheke kòd sa a nan 'Logs' Render yo pou w konekte Whatsapp ou)\n`);
         } catch (err) {
             console.log("❌ Erè lè n ap mande kòd la:", err.message || err);
+            isPairingCodeRequested = false; // Pou l ka re-eseye si l echwe fò
         }
     }
 
@@ -175,7 +183,6 @@ async function startBot() {
 
             const patiMesajKounyeA = [];
             
-            // Fè AI a kapab analize imaj ki voye ba li a
             if (imageBuffer) {
                 console.log("[+] N ap analize foto a pou Gemini...");
                 patiMesajKounyeA.push({
@@ -184,7 +191,6 @@ async function startBot() {
                         mimeType: mimeType
                     }
                 });
-                // Mete tèks itilizatè a te ekri ak foto a, oswa yon enstriksyon defo pou analize
                 patiMesajKounyeA.push({ text: text || "Gade foto sa a. Si se yon egzèsis, rezoud li. Si se yon pwofil egzamen, chache nan baz done mwen an selon enstriksyon m yo." });
             } else {
                 patiMesajKounyeA.push({ text: text });
@@ -209,7 +215,6 @@ async function startBot() {
                 istwaItilizatere.splice(0, 2);
             }
             
-            // Lè Lito (bot la) ap reponn
             await sock.sendMessage(from, { text: responseText }, { quoted: m });
 
         } catch (err) {
@@ -237,5 +242,5 @@ setInterval(() => {
     }).on('error', (err) => {
         console.error("⚠️ Ti entèripsyon ping:", err.message);
     });
-}, 60000); 
-            
+}, 60000);
+    
