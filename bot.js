@@ -4,7 +4,6 @@ const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
 const http = require('http');
-// 👈 Nouvo: ajoute axios ak fs pou jere telechajman imaj matematik yo
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
@@ -69,52 +68,60 @@ console.log("System instruction chaje avèk siksè.");
 const konvesasyonYo = new Map();
 let isPairingCodeRequested = false;
 
-// 👈 Nouvo: Fonksyon k ap konvèti LaTeX an Imaj gratis epi voye yo
+// Fonksyon ki separe tèks ak fòmil epi voye yo kòm imaj PNG
 async function processAndSendMathImages(sock, jid, aiResponse, originalMsg) {
-    // 1. Nou chèche tout sa ki anndan siy $...$oswa$$...$$     const mathRegex = /\$\$([\s\S]+?)\$\$\vert{}\$([\s\S]+?)\$/g;     let match;     let parts = [];     let lastIndex = 0;          // Tcheke pou wè si gen fòmil     if (!mathRegex.test(aiResponse)) {         // Si pa gen math, voye repons nòmal la         await sock.sendMessage(jid, { text: aiResponse }, { quoted: originalMsg });         return;     }      // Reset regex index apre tès la     mathRegex.lastIndex = 0;      // Koupe tèks la an moso: Tèks, Fòmil, Tèks, Fòmil...     while ((match = mathRegex.exec(aiResponse)) !== null) {         // Ajoute tèks ki te anvan fòmil la         if (match.index > lastIndex) {             parts.push({ type: 'text', content: aiResponse.substring(lastIndex, match.index) });         }         // Ajoute fòmil la (pran group 1 pou $$, group 2 pou $)
+    const mathRegex = /\$\$([\s\S]+?)\$\$|\$([\s\S]+?)\$/g;
+    let match;
+    let parts = [];
+    let lastIndex = 0;
+    
+    if (!mathRegex.test(aiResponse)) {
+        await sock.sendMessage(jid, { text: aiResponse }, { quoted: originalMsg });
+        return;
+    }
+
+    mathRegex.lastIndex = 0;
+
+    while ((match = mathRegex.exec(aiResponse)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push({ type: 'text', content: aiResponse.substring(lastIndex, match.index) });
+        }
         const formula = match[1] || match[2];
         parts.push({ type: 'math', content: formula.trim() });
         lastIndex = mathRegex.lastIndex;
     }
     
-    // Ajoute rès tèks ki rete apre dènye fòmil la
     if (lastIndex < aiResponse.length) {
         parts.push({ type: 'text', content: aiResponse.substring(lastIndex) });
     }
 
-    // Voye chak pati youn apre lòt
     for (let part of parts) {
         if (part.type === 'text') {
             const cleanText = part.content.trim();
             if (cleanText) {
                 await sock.sendMessage(jid, { text: cleanText });
-                await delay(1000); // Ti poz pou asire yo rive nan lòd
+                await delay(1000);
             }
         } else if (part.type === 'math') {
             try {
-                // Sèvi ak API "LaTeX as a Service" (LaaS) - Li totalman gratis e pa bezwen API Key
                 const encodedFormula = encodeURIComponent(part.content);
                 const apiUrl = `https://laas.vercel.app/api/png?input=${encodedFormula}&white=false`;
 
-                // Telechaje imaj la an memwa (buffer)
                 const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
                 const imageBuffer = Buffer.from(response.data, 'binary');
 
-                // Voye imaj la bay itilizatè a
                 await sock.sendMessage(jid, { 
                     image: imageBuffer, 
-                    caption: '' // Ou ka kite l vid oswa mete yon ti tèks
+                    caption: '' 
                 });
                 await delay(1000);
             } catch (err) {
                 console.error("❌ Erè lè n ap konvèti LaTeX la an imaj:", err.message);
-                // Si imaj la echwe, voye fòmil la kòm tèks senp kòm plan sekou
                 await sock.sendMessage(jid, { text: `[Fòmil: ${part.content}]` });
             }
         }
     }
 }
-
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesyon_linklybot');
@@ -179,9 +186,6 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // ==========================================
-    // LÈ YON MESAJ ANTRE
-    // ==========================================
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
         if (!m.message || m.key.fromMe) return;
@@ -238,14 +242,12 @@ async function startBot() {
             const result = await model.generateContent({ contents: kontniPoutetGemini });
             let responseText = result.response.text();
 
-            // Filtre netwayaj
             responseText = responseText.replace(/\*/g, '');
             responseText = responseText.replace(/#/g, '');
             if (responseText.toLowerCase().startsWith("bonjou") || responseText.toLowerCase().startsWith("salut") || responseText.toLowerCase().startsWith("bonjour")) {
                  responseText = responseText.replace(/^(Bonjou|Salut|Bonjour).*?\n/i, '').trim(); 
             }
 
-            // KENBE ISTWA A (Lito ap toujou sonje sa l te di a)
             const patiPouIstwa = imageBuffer
                 ? [{ text: `[Imaj ou te bay la] ${text}`.trim() }]
                 : patiMesajKounyeA;
@@ -255,7 +257,6 @@ async function startBot() {
                 istwaItilizatere.splice(0, 2);
             }
             
-            // 👈 Nouvo: Olye nou voye tèks la dirèk, nou pase l nan filtè Imaj la
             await processAndSendMathImages(sock, from, responseText, m);
 
         } catch (err) {
@@ -284,3 +285,4 @@ setInterval(() => {
         console.error("⚠️ Ti entèripsyon ping:", err.message);
     });
 }, 60000);
+                
