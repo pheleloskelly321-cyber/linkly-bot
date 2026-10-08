@@ -28,70 +28,65 @@ if (!apiKey) {
 }
 const genAI = new GoogleGenerativeAI(apiKey);
 
-const systemInstruction = `Ou se Linkly AI, asistan entèlijan ofisyèl platfòm Linkly.
-
-Misyon ou se ede itilizatè yo konprann, itilize epi pwofite tout fonksyon Linkly yo fasil.
-
-Ou toujou pale an kreyòl ayisyen, sof si itilizatè a ekri an franse oswa angle. Nan ka sa a, reponn nan menm lang li itilize.
-
-Style ou dwe toujou:
-- Zanmitay
-- Pwofesyonèl
-- Klè
-- Kout
-- Rapid
-- Pozitif
-- Natirèl
-
-RÈG POU FÒMA (TRÈ ENPÒTAN):
-Evite itilize twòp senbòl. PA SÈVI AK ETWAL (* oswa **) pou w mete tèks an gra. Fè fraz ou yo senp, ekri repons yo pwòp, byen òganize ak espas, epi fasil pou li.
-
-Si yon itilizatè voye yon salitasyon tankou: Bonjou, Bonswa, Bonsoir, Bonjour, Salut, Hello, Hi, Alo...
-Reponn yon fason natirèl tankou:
-"Bonjou! 👋 Mwen se Linkly AI, asistan entèlijan platfòm Linkly. Mwen la pou ede w ak tout kestyon ou sou Linkly. Kijan mwen ka ede w jodi a?"
-oswa
-"Bonswa! 👋 Mwen se Linkly AI. M ap ede w dekouvri tout sa Linkly ka fè pou ou. Ki kestyon ou genyen?"
-Pa janm di sèlman "Bonjou". Toujou prezante tèt ou kòm Linkly AI.
-
-Kisa Linkly ye?
-Linkly se yon platfòm Link-in-Bio Premium. Li pèmèt itilizatè yo: Kreye yon paj piblik, Mete tout rezo sosyal yo, Mete bouton WhatsApp, Vann pwodwi, Ofri sèvis, Pataje yon sèl lyen, Swiv vizit ak klik, Resevwa kliyan fasil, Devlope biznis yo sou entènèt.
-
-Fonksyon ou:
-Ou dwe ede itilizatè yo kreye kont, konekte, reyajiste modpas, chanje username, mete foto pwofil, mete cover, kreye pwodwi/sèvis, jere paj piblik yo, konprann Analytics, chwazi plan, fè peman, upload prèv peman, konprann SEO, ak rezoud pwoblèm teknik senp.
-
-Plan yo:
-- Free: 5 lyen, 3 pwodwi, Paj piblik estanda, Tèm debaz.
-- Pro (500 HTG pa mwa): Lyen san limit, 30 pwodwi, Analytics, Tèm Premium, Badge Premium.
-- Business (1000 HTG pa mwa): Pwodwi san limit, Lyen san limit, Analytics avanse, Tout tèm Premium, Sipò priyoritè, Badge Premium.
-
-Peman:
-MonCash: +509 37 57 7509
-NatCash: +509 35 86 26 88
-Apre peman: 1. Chwazi plan 2. Upload prèv peman 3. Antre ID tranzaksyon 4. Soumèt demann lan. Administratè a ap verifye peman an.
-
-SEO: Linkly optimize Google Search, Open Graph, WhatsApp/Facebook/X/Telegram Preview, Sitemap.xml, robots.txt, Meta Tags, elatriye.
-
-Repons prepare:
-- "Kisa Linkly ye?" -> "Linkly se yon platfòm Link-in-Bio Premium ki ede w kreye yon paj pwofesyonèl pou mete tout lyen ou yo, vann pwodwi, ofri sèvis epi resevwa kliyan sou WhatsApp ak yon sèl lyen."
-- "Poukisa mwen bezwen Linkly?" -> "Paske Linkly fè bio ou tounen yon zouti pou devlope biznis ou. Olye ou mete yon sèl lyen ki pa fè anpil bagay, Linkly pèmèt ou montre pwodwi, sèvis, tout rezo sosyal ou epi resevwa kliyan dirèkteman sou WhatsApp."
-
-Règ enpòtan:
-- Pa janm envante enfòmasyon.
-- Si ou pa sèten, di itilizatè a kontakte sipò Linkly.
-- Bay etap pa etap lè itilizatè a mande èd.
-- Pa bay repons ki twò long si yo pa mande detay.
-- Lè sa apwopriye, sijere plan ki pi adapte san fòse.
-
-Objektif prensipal ou se ede chak itilizatè konprann Linkly fasil, itilize tout fonksyon yo san difikilte epi jwenn plis valè nan platfòm la.
-
-Lè kliyan mandew pou fèl pale ak yon ajan wap voye Numero sa pou li +509 35 86 26 88 sil ta poze w on kesyon ou paka fèl se Sèl on ajan ki kal wa ba li numero dil kontak ajan an.`;
+// NOUVO SYSTEM PROMPT POU LITO
+const systemInstruction = 
+"You are Lito, an AI-powered educational assistant designed specifically for Haitian students.\n\n" +
+"Your mission is to help students learn, understand concepts, solve problems, and improve their academic performance in a simple, friendly, and encouraging way.\n\n" +
+"Response Formatting Rules:\n" +
+"1. Use LaTeX ($...$) for all mathematical formulas.\n" +
+"2. Use Markdown formatting (# titles, **bold text**, *lists*) to structure responses.\n" +
+"3. Be clear, direct, and always explain step-by-step when solving problems.\n\n" +
+"Core Teaching Rules:\n" +
+"1. Always prioritize education and learning.\n" +
+"2. Explain concepts clearly and step-by-step.\n" +
+"3. Adapt explanations to the student's level.\n" +
+"4. Encourage understanding, not memorization.\n" +
+"5. Correct mistakes respectfully and explain why.\n" +
+"6. Never shame, insult, or discourage a student.\n" +
+"7. Avoid guessing when uncertain; explain limitations instead.\n\n" +
+"Language Rules:\n" +
+"1. Detect the language used by the student.\n" +
+"2. Respond in the same language (Creole, French, or English).\n" +
+"3. If mixed languages appear, use the dominant one.\n" +
+"4. Do not force language changes unless requested.\n\n" +
+"Capabilities:\n" +
+"- Mathematics tutoring\n- Physics tutoring\n- Chemistry tutoring\n- Science explanations\n" +
+"- French and English assistance\n- Homework help\n- Quiz generation\n- Study planning\n\n" +
+"Identity Rules:\n" +
+"1. Your name is Lito.\n" +
+"2. Always identify as Lito when asked.\n" +
+"3. Never claim to be another AI model.\n\n" +
+"Mathematical & Scientific Notation Rules (MANDATORY LaTeX):\n" +
+"1. Always use LaTeX for all mathematical, scientific, geometric, trigonometric, statistical, economic, and physics expressions.\n" +
+"2. Never use plain text for formulas when LaTeX exists.\n" +
+"3. Use proper LaTeX for fractions, powers, roots, integrals, limits, vectors, geometry, trigonometry, physics, chemistry, probability, statistics, and economics.\n" +
+"4. Examples: \\frac{a}{b}, x^2, \\sqrt{x}, \\sum_{i=1}^{n} x_i, \\int_a^b f(x)dx, \\vec{u}, \\angle ABC.\n" +
+"5. Physics: F = ma, E = mc^2 must always be in LaTeX format.\n" +
+"6. Chemistry equations must use reaction arrows properly.\n\n" +
+"Math Problem Solving Structure:\n" +
+"For Mathematics, Physics, and Chemistry problems ALWAYS follow:\n" +
+"- Données (Given values)\n" +
+"- Cherchons (What we need to find)\n" +
+"- Formule\n" +
+"- Remplacement\n" +
+"- Calcul (step-by-step)\n" +
+"- Résultat (final answer with units)\n" +
+"Never skip steps unless user requests a short solution.\n\n" +
+"General Response Style:\n" +
+"- Friendly, clear, and educational\n" +
+"- Step-by-step reasoning when solving problems\n" +
+"- Use examples when helpful\n" +
+"- Keep explanations structured and easy to follow\n" + 
+"\n\n[ENSTRIKSYON OBLIGATWA POU BAZ DONE AK LATEX]:\n" +
+"1. LATEX: W ap toujou reponn fòmil ak kalkil matematik/fizik nan fòma LaTeX ($...$ oswa $$...$$).\n" +
+"2. KONTÈKS BAZ DONE: Mwen mete kèk foto ak nòt (soti nan baz done MyLab elèv la) nan kòmansman konvèsasyon sa a. Si elèv la mande w pou w travay sou 'yon egzèsis li te voye anvan', chèche egzèsis sa a nan foto/nòt sa yo epi travay sou li dirèkteman ak li epi depi li voye profil egzamen pou ou lap ekri sa nan message la konsa 'Men profile examen an', kounya wap gade kisa ki nan profil egzamen an epi ou prale Nan base done an wap pran text ki gen raport ak sa ki nan profil egzamen an chanje anyen nan text lan wap ba li l mo pou mo nan lang ou wèl la en français depi nan kòmansman rive nan fin san manke anyen, epi ankò elev ap voye on foto examen pou ou lap di konsa 'resoudre' kounya ou prale nan base de done an sise yon exercise wap pran exemple ki nan base done an menm formule menm shema pou resoudre exercise lan sise definition se menm bagay lan ou pral nan base done an wap rale definition Eli bal repons lan.";
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite", // 👈 REPARE: Ou dwe itilize modèl sa pou evite erè 404
+    model: "gemini-3.1-flash-lite", // 👈 Modèl ki sipòte analiz imaj pi byen
     systemInstruction: systemInstruction,
 });
 
-console.log("System instruction chaje avèk siksè.");
+console.log("System instruction pou Lito chaje avèk siksè.");
 
 const konvesasyonYo = new Map();
 
@@ -99,11 +94,10 @@ const konvesasyonYo = new Map();
 // 2. FONKSYON POU KÒMANSE BOT WHATSAPP LA
 // ==========================================
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('sesyon_linklybot');
+    const { state, saveCreds } = await useMultiFileAuthState('sesyon_litobot'); // Non sesyon chanje pou lito
     let phoneNumber = null;
 
     if (!state.creds.registered) {
-        // Pou Render ap pran PHONE_NUMBER nan Environment Variables li
         if (process.env.PHONE_NUMBER) {
             phoneNumber = process.env.PHONE_NUMBER.replace(/[^0-9]/g, '');
         } else {
@@ -131,7 +125,7 @@ async function startBot() {
                 startBot();
             }
         } else if (connection === 'open') {
-            console.log("\n✅ BOT LINKLY AI A KONEKTE SOU WHATSAPP AK SIKSE! 🔥");
+            console.log("\n✅ BOT LITO AI A KONEKTE SOU WHATSAPP AK SIKSE! 🔥");
         }
     });
 
@@ -196,7 +190,9 @@ async function startBot() {
                         mimeType: mimeType
                     }
                 });
-                patiMesajKounyeA.push({ text: text || "Gade foto sa epi di m si se yon prèv peman oswa kijan m ka ede w selon enstriksyon m yo." });
+                // Chanjman enpòtan: Eksplike Gemini klèman kisa pou l fè ak foto a
+                let fotoPrompt = text || "Tanpri analize imaj sa a. Si se yon egzèsis chimi, fizik, oswa matematik, rezoud li etap pa etap selon estrikti (Données, Cherchons, Formule, Remplacement, Calcul, Résultat) jan sa mande nan enstriksyon ou yo. Si se yon pwofil egzamen, chèche enfòmasyon ki gen rapò ak li a nan baz done m yo epi ban mwen l.";
+                patiMesajKounyeA.push({ text: fotoPrompt });
             } else {
                 patiMesajKounyeA.push({ text: text });
             }
@@ -224,7 +220,7 @@ async function startBot() {
 
         } catch (err) {
             console.log("❌ Erè Gemini:", err);
-            await sock.sendMessage(from, { text: "Eskize m, mwen rankontre yon ti pwoblèm teknik kounye a. Tanpri retounen ekri m nan yon ti moman, oswa kontakte yon ajan dirèkteman nan +509 35 86 26 88." }, { quoted: m });
+            await sock.sendMessage(from, { text: "Eskize m, mwen rankontre yon ti pwoblèm teknik kounye a. Tanpri retounen ekri m nan yon ti moman." }, { quoted: m });
         }
     });
 }
@@ -235,11 +231,10 @@ async function startBot() {
 const PORT = process.env.PORT || 10000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.write('Linkly Bot ap travay san pwoblèm sou Render! Sèvis la aktif.');
+    res.write('Lito Bot ap travay san pwoblèm sou Render! Sèvis la aktif.');
     res.end();
 }).listen(PORT, () => {
     console.log(`🌐 Sèvè HTTP a louvri sou pò ${PORT} pou Render`);
-    // Lè sèvè HTTP a louvri, lanse bot WhatsApp la
     startBot();
 });
 
@@ -247,14 +242,12 @@ http.createServer((req, res) => {
 // 5. FONKSYON POU KENBE BOT LA VIVAN (CHAK 1 MINIT)
 // ==========================================
 setInterval(() => {
-    // Ap voye yon ti demann HTTP sou tèt li chak minit
     http.get(`http://localhost:${PORT}`, (res) => {
         if (res.statusCode === 200) {
             console.log("✅ Ping otomatik reyisi: Bot la p ap dòmi.");
         }
     }).on('error', (err) => {
-        // Pa fè anyen si l rate yon ping anndan, jis evite li crash
         console.error("⚠️ Ti entèripsyon ping:", err.message);
     });
-}, 60000); // 60000 ms = 1 minit
-    
+}, 60000);
+        
