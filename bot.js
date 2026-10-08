@@ -1,10 +1,13 @@
 require('dotenv').config();
-// 👈 Modifikasyon 1: Mwen ajoute 'Browsers' nan enpòtasyon Baileys la
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
 const http = require('http');
+// 👈 Nouvo: ajoute axios ak fs pou jere telechajman imaj matematik yo
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -15,7 +18,6 @@ if (!apiKey) {
 }
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// 👈 Mwen refè TOUT systemInstruction an pou l klè, pwòp, san twòp zetwal, epi ak bèl espas.
 const systemInstruction = 
 "You are Lito, an AI-powered educational assistant designed specifically for Haitian students.\n\n" +
 "Your mission is to help students learn, understand concepts, solve problems, and improve their academic performance in a simple, friendly, and encouraging way.\n\n" +
@@ -23,7 +25,7 @@ const systemInstruction =
 "1. DO NOT INTRODUCE YOURSELF. DO NOT say 'Bonjou, mwen se Lito' or 'Bonjour'. Start answering the student's question IMMEDIATELY. Never repeat your name or a greeting in your messages.\n" +
 "2. DO NOT USE ASTERISKS (*), HASHTAGS (#), OR UNDERSCORES (_) FOR BOLD, ITALIC, OR TITLES. Write plain text for a clean, natural look on WhatsApp. Use capital letters for titles if needed.\n" +
 "3. MANDATORY SPACING: You MUST add two empty lines (double line break) between every paragraph, every list item, and every section. The text must be very airy and spaced out. Do not write clumpy paragraphs.\n" +
-"4. Use LaTeX ($...$) ONLY for mathematical formulas.\n" +
+"4. IMPORTANT MATH RULE: Use LaTeX ($...$ or $$...$$) ONLY for mathematical formulas. The system will convert these into images. ONLY put formulas inside the $ signs, never regular text.\n" +
 "5. Be clear, direct, and always explain step-by-step when solving problems.\n\n" +
 "=== LANGUAGE RULES ===\n" +
 "1. When explaining concepts, reading images, or summarizing documents, provide the text or titles in French, but EXPLAIN EVERYTHING IN HAITIAN CREOLE (Kreyòl ayisyen).\n" +
@@ -64,11 +66,55 @@ const model = genAI.getGenerativeModel({
 });
 
 console.log("System instruction chaje avèk siksè.");
-
 const konvesasyonYo = new Map();
-
-// Varyab sa ap anpeche kòd la mande kòd an bouk si l pran on erè
 let isPairingCodeRequested = false;
+
+// 👈 Nouvo: Fonksyon k ap konvèti LaTeX an Imaj gratis epi voye yo
+async function processAndSendMathImages(sock, jid, aiResponse, originalMsg) {
+    // 1. Nou chèche tout sa ki anndan siy $...$oswa$$...$$     const mathRegex = /\$\$([\s\S]+?)\$\$\vert{}\$([\s\S]+?)\$/g;     let match;     let parts = [];     let lastIndex = 0;          // Tcheke pou wè si gen fòmil     if (!mathRegex.test(aiResponse)) {         // Si pa gen math, voye repons nòmal la         await sock.sendMessage(jid, { text: aiResponse }, { quoted: originalMsg });         return;     }      // Reset regex index apre tès la     mathRegex.lastIndex = 0;      // Koupe tèks la an moso: Tèks, Fòmil, Tèks, Fòmil...     while ((match = mathRegex.exec(aiResponse)) !== null) {         // Ajoute tèks ki te anvan fòmil la         if (match.index > lastIndex) {             parts.push({ type: 'text', content: aiResponse.substring(lastIndex, match.index) });         }         // Ajoute fòmil la (pran group 1 pou $$, group 2 pou $)
+        const formula = match[1] || match[2];
+        parts.push({ type: 'math', content: formula.trim() });
+        lastIndex = mathRegex.lastIndex;
+    }
+    
+    // Ajoute rès tèks ki rete apre dènye fòmil la
+    if (lastIndex < aiResponse.length) {
+        parts.push({ type: 'text', content: aiResponse.substring(lastIndex) });
+    }
+
+    // Voye chak pati youn apre lòt
+    for (let part of parts) {
+        if (part.type === 'text') {
+            const cleanText = part.content.trim();
+            if (cleanText) {
+                await sock.sendMessage(jid, { text: cleanText });
+                await delay(1000); // Ti poz pou asire yo rive nan lòd
+            }
+        } else if (part.type === 'math') {
+            try {
+                // Sèvi ak API "LaTeX as a Service" (LaaS) - Li totalman gratis e pa bezwen API Key
+                const encodedFormula = encodeURIComponent(part.content);
+                const apiUrl = `https://laas.vercel.app/api/png?input=${encodedFormula}&white=false`;
+
+                // Telechaje imaj la an memwa (buffer)
+                const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+                const imageBuffer = Buffer.from(response.data, 'binary');
+
+                // Voye imaj la bay itilizatè a
+                await sock.sendMessage(jid, { 
+                    image: imageBuffer, 
+                    caption: '' // Ou ka kite l vid oswa mete yon ti tèks
+                });
+                await delay(1000);
+            } catch (err) {
+                console.error("❌ Erè lè n ap konvèti LaTeX la an imaj:", err.message);
+                // Si imaj la echwe, voye fòmil la kòm tèks senp kòm plan sekou
+                await sock.sendMessage(jid, { text: `[Fòmil: ${part.content}]` });
+            }
+        }
+    }
+}
+
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesyon_linklybot');
@@ -89,7 +135,6 @@ async function startBot() {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: "silent" }),
-        // 👈 Modifikasyon 2: Itilize defo navigatè Baileys pou evite bloke (Erè 405)
         browser: Browsers.ubuntu('Chrome') 
     });
 
@@ -100,11 +145,10 @@ async function startBot() {
             const rezon = lastDisconnect?.error?.output?.statusCode;
             console.log(`[-] Koneksyon fèmen (Kòd: ${rezon}).`);
             
-            // 👈 Modifikasyon 3: Frennen rekoneksyon an si l pran 405 pou l pa spam API WhatsApp la
             if (rezon === 405) {
                 console.log("⚠️ WHATSAPP BLOKE DEMANN NAN POU 10-15 MINIT (Erè 405). Bot la ap tann avan l eseye ankò...");
-                isPairingCodeRequested = false; // Reset pou l ka mande l ankò
-                setTimeout(startBot, 30000); // Tann 30 segonn olye l rekonekte imedyatman
+                isPairingCodeRequested = false;
+                setTimeout(startBot, 30000);
             } else if (rezon !== DisconnectReason.loggedOut) {
                 console.log("N ap rekonekte nan 5 segonn...");
                 setTimeout(startBot, 5000);
@@ -117,7 +161,6 @@ async function startBot() {
         }
     });
 
-    // 👈 Modifikasyon 4: Fè l mande kòd la yon sèl fwa nan sik la
     if (!sock.authState.creds.registered && phoneNumber && !isPairingCodeRequested) {
         await delay(5000);
         try {
@@ -130,14 +173,14 @@ async function startBot() {
             console.log(`(Tcheke kòd sa a nan 'Logs' Render yo pou w konekte Whatsapp ou)\n`);
         } catch (err) {
             console.log("❌ Erè lè n ap mande kòd la:", err.message || err);
-            isPairingCodeRequested = false; // Pou l ka re-eseye si l echwe fò
+            isPairingCodeRequested = false; 
         }
     }
 
     sock.ev.on('creds.update', saveCreds);
 
     // ==========================================
-    // 3. LÈ YON MESAJ ANTRE (Avèk jere imaj pou analiz)
+    // LÈ YON MESAJ ANTRE
     // ==========================================
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
@@ -195,26 +238,25 @@ async function startBot() {
             const result = await model.generateContent({ contents: kontniPoutetGemini });
             let responseText = result.response.text();
 
-            // 👈 Filtre sekirite anplis si jamais AI a ta toujou vle mete zetwal (**) oswa (###) ou byen kòmanse ak Bonjou
-            responseText = responseText.replace(/\*/g, ''); // Retire tout zetwal
-            responseText = responseText.replace(/#/g, ''); // Retire tout hashtag
+            // Filtre netwayaj
+            responseText = responseText.replace(/\*/g, '');
+            responseText = responseText.replace(/#/g, '');
             if (responseText.toLowerCase().startsWith("bonjou") || responseText.toLowerCase().startsWith("salut") || responseText.toLowerCase().startsWith("bonjour")) {
-                 responseText = responseText.replace(/^(Bonjou|Salut|Bonjour).*?\n/i, '').trim(); // Retire liy salitasyon an
+                 responseText = responseText.replace(/^(Bonjou|Salut|Bonjour).*?\n/i, '').trim(); 
             }
 
-
+            // KENBE ISTWA A (Lito ap toujou sonje sa l te di a)
             const patiPouIstwa = imageBuffer
                 ? [{ text: `[Imaj ou te bay la] ${text}`.trim() }]
                 : patiMesajKounyeA;
-
             istwaItilizatere.push({ role: 'user', parts: patiPouIstwa });
             istwaItilizatere.push({ role: 'model', parts: [{ text: responseText }] });
-
             if (istwaItilizatere.length > 20) {
                 istwaItilizatere.splice(0, 2);
             }
             
-            await sock.sendMessage(from, { text: responseText }, { quoted: m });
+            // 👈 Nouvo: Olye nou voye tèks la dirèk, nou pase l nan filtè Imaj la
+            await processAndSendMathImages(sock, from, responseText, m);
 
         } catch (err) {
             console.log("❌ Erè Gemini:", err);
@@ -242,4 +284,3 @@ setInterval(() => {
         console.error("⚠️ Ti entèripsyon ping:", err.message);
     });
 }, 60000);
-    
