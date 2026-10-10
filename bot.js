@@ -4,9 +4,7 @@ const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const readline = require('readline');
 const http = require('http');
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+// ❌ Nou retire axios la nèt paske l te lakòz erè a sou Render
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -68,7 +66,7 @@ console.log("System instruction chaje avèk siksè.");
 const konvesasyonYo = new Map();
 let isPairingCodeRequested = false;
 
-// Fonksyon ki separe tèks ak fòmil epi voye yo kòm imaj PNG
+// Fonksyon k ap sèvi ak fetch natif natal pou konvèti LaTeX an imaj PNG
 async function processAndSendMathImages(sock, jid, aiResponse, originalMsg) {
     const mathRegex = /\$\$([\s\S]+?)\$\$|\$([\s\S]+?)\$/g;
     let match;
@@ -107,8 +105,12 @@ async function processAndSendMathImages(sock, jid, aiResponse, originalMsg) {
                 const encodedFormula = encodeURIComponent(part.content);
                 const apiUrl = `https://laas.vercel.app/api/png?input=${encodedFormula}&white=false`;
 
-                const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
-                const imageBuffer = Buffer.from(response.data, 'binary');
+                // Sèvi ak fetch natif natal la olye axios
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Echèk nan telechajman imaj la");
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const imageBuffer = Buffer.from(arrayBuffer);
 
                 await sock.sendMessage(jid, { 
                     image: imageBuffer, 
@@ -285,4 +287,3 @@ setInterval(() => {
         console.error("⚠️ Ti entèripsyon ping:", err.message);
     });
 }, 60000);
-                
